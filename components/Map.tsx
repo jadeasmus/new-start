@@ -1,17 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { View } from "react-native";
 import MapView, { Marker, LatLng } from "react-native-maps";
 import tw from "tailwind-react-native-classnames";
-import { useRecoilValue, useRecoilState } from "recoil";
+import { useRecoilState } from "recoil";
 import {
   originStateSelector,
   destinationStateSelector,
 } from "../state/Directions.state";
 import Directions from "../components/Directions";
 
-type Props = {};
-
-export default function Map({}: Props) {
+export default function Map() {
   const [region, setRegion] = useState({
     latitude: 37.76323196704869,
     longitude: -122.44242387859887,
@@ -20,10 +18,34 @@ export default function Map({}: Props) {
   const [destination, setDestination] = useRecoilState(
     destinationStateSelector
   );
+  // if all origin and destination coords are filled, we are ready to route
+  const ready = useMemo(() => {
+    if (
+      origin.latitude !== 0 &&
+      origin.longitude !== 0 &&
+      destination.latitude !== 0 &&
+      destination.longitude !== 0
+    ) {
+      return true;
+    } else {
+      return false;
+    }
+  }, [origin, destination]);
+
+  // zoom to fit to markers
+  const mapRef = useRef<MapView>(null);
+  useEffect(() => {
+    console.log("zooming");
+    mapRef.current?.fitToSuppliedMarkers(["origin", "destination"], {
+      edgePadding: { top: 60, bottom: 60, left: 60, right: 60 },
+      animated: true,
+    });
+  }, [origin, destination]);
 
   return (
     <View>
       <MapView
+        ref={mapRef}
         style={tw`h-full`}
         mapType="mutedStandard"
         // centered on SF
@@ -53,9 +75,7 @@ export default function Map({}: Props) {
           />
         ) : null}
         {/* directions */}
-        <View style={tw``}>
-          <Directions />
-        </View>
+        {ready && <Directions />}
       </MapView>
     </View>
   );
