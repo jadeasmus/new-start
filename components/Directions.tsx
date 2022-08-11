@@ -5,6 +5,8 @@ import MapViewDirections from "react-native-maps-directions";
 import { useRecoilValue, useRecoilState } from "recoil";
 import { originState, destinationState } from "../state/Directions.state";
 import { GOOGLE_MAPS_APIKEY } from "@env";
+import { supabase } from "../utils/supabase";
+import "react-native-url-polyfill/auto"; // helps supabase work with react native
 import axios from "axios";
 
 const Directions = () => {
@@ -17,43 +19,29 @@ const Directions = () => {
   // if supabase col updated_at is not at least yesterday,
   // then call api to tell it to update supabase data and return outdated data for now
   useEffect(() => {
-    // call to supabase to get crime data
+    console.log("calling supabase");
+    getCrimeData();
     // if statement that checks updated_at
     // if: return data
     // else: call api to update data and return data
-  }, [origin, destination]);
+  }, []);
 
-  // const [crimeData, setCrimeData] = useState<any>();
-  // const getCrimeData = () => {
-  //   axios
-  //     .get("http://localhost:3000/api/sfpd/getData") // dev version TODO: make prod version
-  //     // .get("http://10.0.0.74:19000/api/sfpd/getData") // emulator ip address
-  //     .then((response) => {
-  //       setCrimeData(response);
-  //       console.log("crime data", response);
-  //     })
-  //     .catch((error) => {
-  //       if (error.response) {
-  //         console.log("response error", error.response);
-  //         console.log(error.response.data);
-  //         //   console.log(error.response.status);
-  //         //   console.log(error.response.headers);
-  //       } else if (error.request) {
-  //         console.log("request error");
-  //         console.log(error.request);
-  //       } else {
-  //         console.log("err", error.message);
-  //       }
-  //     });
-  // };
-  // TODO: currently returning a response error
-  // if origin and destination are set: get crime data
-  //   useEffect(() => {
-  //     if (crimeData) return;
-  //     if (origin.latitude !== 0 && destination.latitude !== 0) {
-  //       getCrimeData();
-  //     }
-  //   }, [origin, destination]);
+  const getCrimeData = async () => {
+    const { data, error } = await supabase
+      .from("crime_data_intersections")
+      .select("updated_at")
+      .limit(1); // only need one row
+
+    if (error) {
+      console.log("supabase", error);
+    } else if (data) {
+      console.log("supabase", data);
+    } else {
+      console.log("we fycked");
+    }
+
+    return data;
+  };
 
   // get more details directions response from google
   const [googleDirections, setGoogleDirections] = useState<any>();
@@ -89,7 +77,7 @@ const Directions = () => {
           return step.html_instructions;
         })
         .join("\n");
-      console.log(addresses);
+      // console.log(addresses);
     }
   }, [googleDirections]);
 
