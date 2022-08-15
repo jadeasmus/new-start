@@ -5,43 +5,16 @@ import MapViewDirections from "react-native-maps-directions";
 import { useRecoilValue, useRecoilState } from "recoil";
 import { originState, destinationState } from "../state/Directions.state";
 import { GOOGLE_MAPS_APIKEY } from "@env";
-import { supabase } from "../utils/supabase";
-import "react-native-url-polyfill/auto"; // helps supabase work with react native
 import axios from "axios";
 
-const Directions = () => {
+type Intersection = { intersection: string };
+
+const Directions = ({ intersections }: { intersections: Intersection[] }) => {
   const origin = useRecoilValue(originState);
   const destination = useRecoilValue(destinationState);
+  const crime_cross_streets = intersections;
   const [googleDistance, setGoogleDistance] = useState<number>();
   const [googleDuration, setGoogleDuration] = useState<number>();
-
-  // call supabase to get crime data
-  // if supabase col updated_at is not at least yesterday,
-  // then call api to tell it to update supabase data and return outdated data for now
-  useEffect(() => {
-    console.log("calling supabase");
-    getCrimeData();
-    // if statement that checks updated_at
-    // if: return data
-    // else: call api to update data and return data
-  }, []);
-
-  const getCrimeData = async () => {
-    const { data, error } = await supabase
-      .from("crime_data_intersections")
-      .select("updated_at")
-      .limit(1); // only need one row
-
-    if (error) {
-      console.log("supabase", error);
-    } else if (data) {
-      console.log("supabase", data);
-    } else {
-      console.log("we fycked");
-    }
-
-    return data;
-  };
 
   // get more details directions response from google
   const [googleDirections, setGoogleDirections] = useState<any>();
@@ -65,10 +38,38 @@ const Directions = () => {
     }
   }, [origin, destination]);
 
-  // helper function to translate latlng to addresses
-  const latlngToAddress = (latlng: LatLng) => {};
+  // solutionA: use helper function to translate google data 'steps' into addresses
+  const [googleSteps, setGoogleSteps] = useState<any>();
+  useEffect(() => {
+    if (googleDirections) {
+      // pull the latlng start locations from each step
+      const steps = googleDirections.data.routes[0].legs[0].steps;
+      let points: LatLng[] = [];
+      steps.map((step: { start_location: LatLng }) =>
+        points.push(step.start_location)
+      );
+      console.log("steps", points);
 
-  // use helper function to translate google data 'steps' into addresses
+      // translates point into address
+      // const latLngToAddress = async (latlng: LatLng) => {
+      //   const { latitude, longitude } = latlng;
+      //   let addresses: [] = [];
+      //   const res = await axios
+      //     .get(
+      //       `https://maps.googleapis.com/maps/api/geocode/json?address=${latitude},${longitude}&key=${GOOGLE_MAPS_APIKEY}`
+      //     )
+      //     .then((res) => {
+      //       addresses.push(res.data.results[0].formatted_address);
+      //     });
+      //   return addresses;
+      // };
+
+      // get all the addresses from steps
+      // let temp: any = [];
+      // points.map((point) => temp.push(latLngToAddress(point)));
+    }
+  }, [googleDirections]);
+  // solutionB: get html instructions of google directions and parse out street names
   useEffect(() => {
     if (googleDirections) {
       const steps = googleDirections.data.routes[0].legs[0].steps;
@@ -78,27 +79,61 @@ const Directions = () => {
         })
         .join("\n");
       // console.log(addresses);
+
+      // parse out the streets and put into array
+      let streets = [
+        ...addresses.matchAll("<b>\\w+\\s+\\w+\\s*\\w*\\s*\\w*\\s*\\w*<\\/b>"),
+      ];
+      // console.log(streets);
     }
   }, [googleDirections]);
 
+  // demo hardcoded data
+  // if origin=Alamo and destination=Lafayette
+  const waypoints: LatLng[] = [
+    { latitude: 37.779785159349025, longitude: -122.43025532076263 }, // steiner//webster
+    { latitude: 37.781676384168165, longitude: -122.43048213214408 }, // webster//eddy
+    { latitude: 37.78247409006583, longitude: -122.42414274997863 }, // eddy//gough
+    { latitude: 37.790889810937266, longitude: -122.42585517701208 }, // gough//sacremento
+  ];
+
   return (
-    // Google default fastest route
-    <MapViewDirections
-      origin={origin}
-      destination={destination}
-      apikey={GOOGLE_MAPS_APIKEY}
-      strokeWidth={3}
-      strokeColor={"#3b83f6"}
-      mode={"WALKING"}
-      onReady={(result) => {
-        console.log("routing");
-        setGoogleDistance(result.distance);
-        setGoogleDuration(result.duration);
-      }}
-      onError={(error) => {
-        console.log("googleError", error);
-      }}
-    />
+    <>
+      {/* fastest directions */}
+      <MapViewDirections
+        origin={origin}
+        destination={destination}
+        apikey={GOOGLE_MAPS_APIKEY}
+        strokeWidth={3}
+        strokeColor={"#3b83f6"}
+        mode={"WALKING"}
+        onReady={(result) => {
+          console.log("routing");
+          setGoogleDistance(result.distance);
+          setGoogleDuration(result.duration);
+        }}
+        onError={(error) => {
+          console.log("googleError", error);
+        }}
+      />
+      {/* safety waypoints */}
+      <MapViewDirections
+        waypoints={waypoints}
+        origin={origin}
+        destination={destination}
+        apikey={GOOGLE_MAPS_APIKEY}
+        strokeWidth={3}
+        strokeColor={"#9DE267"}
+        onReady={(result) => {
+          console.log("waypoints routing");
+          // setGoogleDistance(result.distance);
+          // setGoogleDuration(result.duration);
+        }}
+        onError={(error) => {
+          console.log("waypoints googleError", error);
+        }}
+      />
+    </>
   );
 };
 

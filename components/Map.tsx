@@ -8,12 +8,12 @@ import {
   destinationStateSelector,
 } from "../state/Directions.state";
 import Directions from "../components/Directions";
+// import useGetCrimeInfo from "../hooks/useGetCrimeInfo";
+import { supabase } from "../utils/supabase";
+import "react-native-url-polyfill/auto"; // helps supabase work with react native
+import { subDays } from "date-fns";
 
 export default function Map() {
-  const [region, setRegion] = useState({
-    latitude: 37.76323196704869,
-    longitude: -122.44242387859887,
-  });
   const [origin, setOrigin] = useRecoilState(originStateSelector);
   const [destination, setDestination] = useRecoilState(
     destinationStateSelector
@@ -32,10 +32,64 @@ export default function Map() {
     }
   }, [origin, destination]);
 
-  // zoom to fit to markers
+  // if updated_at is not yesterday, we need to update the crime data
+  const [updated_at, set_updated_at] = useState<string>("");
+  const getUpdateInfo = async () => {
+    const { data, error } = await supabase
+      .from("crime_data_intersections")
+      .select("updated_at")
+      .limit(1); // only need one row
+
+    if (data) {
+      console.log("supabase", data);
+      set_updated_at(data[0].updated_at);
+    }
+  };
+  // TODO: calls the api and returns nothing
+  const updateInfo = () => {
+    console.log("pretend to update");
+  };
+  // get when last updated upon init load in
+  useEffect(() => {
+    getUpdateInfo();
+  }, []);
+
+  // get all the cross streets with crime counts greater than or equal to 7
+  type Intersection = {
+    intersection: string;
+  };
+  const [crimeData, setCrimeData] = useState<Intersection[]>([]);
+  const getCrimeData = async () => {
+    const { data, error } = await supabase
+      .from("crime_data_intersections")
+      .select("intersection")
+      .gte("crime_count", 7);
+
+    if (error) {
+      console.log("supabase", error);
+    } else if (data) {
+      console.log("supabase", data);
+      setCrimeData(data);
+    }
+  };
+
+  // get the data, and update the data if older than yesterday
+  useEffect(() => {
+    let today = new Date();
+    let yesterday = subDays(today, 1);
+    if (updated_at !== yesterday.toISOString()) {
+      // return outdated data for now, and then update the data
+      getCrimeData();
+      updateInfo();
+    } else {
+      // return up to date data
+      getCrimeData();
+    }
+  }, [updated_at]);
+
+  // zoom map to fit to markers
   const mapRef = useRef<MapView>(null);
   useEffect(() => {
-    console.log("zooming");
     mapRef.current?.fitToSuppliedMarkers(["origin", "destination"], {
       edgePadding: { top: 60, bottom: 60, left: 60, right: 60 },
       animated: true,
@@ -65,7 +119,7 @@ export default function Map() {
             identifier={"origin"}
           />
         ) : null}
-        {destination.latitude !== 0 && destination.longitude !== 0 ? (
+        {destination.latitude !== 0 ? (
           <Marker
             coordinate={destination}
             draggable
@@ -75,7 +129,7 @@ export default function Map() {
           />
         ) : null}
         {/* directions */}
-        {ready && <Directions />}
+        {ready && <Directions intersections={crimeData} />}
       </MapView>
     </View>
   );
