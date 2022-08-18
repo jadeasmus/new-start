@@ -12,6 +12,7 @@ import Directions from "../components/Directions";
 import { supabase } from "../utils/supabase";
 import "react-native-url-polyfill/auto"; // helps supabase work with react native
 import { subDays } from "date-fns";
+import ResultsScreen from "../screens/ResultsScreen";
 
 export default function Map() {
   const [origin, setOrigin] = useRecoilState(originStateSelector);
@@ -91,7 +92,7 @@ export default function Map() {
   const mapRef = useRef<MapView>(null);
   useEffect(() => {
     mapRef.current?.fitToSuppliedMarkers(["origin", "destination"], {
-      edgePadding: { top: 60, bottom: 60, left: 60, right: 60 },
+      edgePadding: { top: 150, bottom: 90, left: 90, right: 90 },
       animated: true,
     });
   }, [origin, destination]);
@@ -129,6 +130,7 @@ export default function Map() {
           />
         ) : null}
         {/* directions */}
+        {/* {!ready && <ResultsScreen crimeData={crimeData} />} */}
         {ready && <Directions intersections={crimeData} />}
       </MapView>
     </View>

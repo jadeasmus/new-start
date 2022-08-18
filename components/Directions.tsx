@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { View, Text } from "react-native";
+import { View, Text, SafeAreaView } from "react-native";
 import { LatLng } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import { useRecoilValue, useRecoilState } from "recoil";
 import { originState, destinationState } from "../state/Directions.state";
 import { GOOGLE_MAPS_APIKEY } from "@env";
 import axios from "axios";
+import tw from "tailwind-react-native-classnames";
 
 type Intersection = { intersection: string };
 
@@ -90,15 +91,44 @@ const Directions = ({ intersections }: { intersections: Intersection[] }) => {
 
   // demo hardcoded data
   // if origin=Alamo and destination=Lafayette
-  const waypoints: LatLng[] = [
+  const AtoLwaypoints: LatLng[] = [
     { latitude: 37.779785159349025, longitude: -122.43025532076263 }, // steiner//webster
     { latitude: 37.781676384168165, longitude: -122.43048213214408 }, // webster//eddy
+    { latitude: 37.78208948747835, longitude: -122.42740041382972 }, // eddy//laguna
     { latitude: 37.78247409006583, longitude: -122.42414274997863 }, // eddy//gough
     { latitude: 37.790889810937266, longitude: -122.42585517701208 }, // gough//sacremento
+  ];
+  // patricia's green to city hall
+  const PtoCwaypoints: LatLng[] = [
+    { latitude: 37.77577750936979, longitude: -122.4242752026981 }, // pats green//fell
+    { latitude: 37.77639567975192, longitude: -122.41940112137797 }, // fell//van ness
+    { latitude: 37.778277755982174, longitude: -122.41982009685927 }, // van ness//grove
+  ];
+  // alamo square to jeferson park
+  const AtoJwaypoints: LatLng[] = [
+    { latitude: 37.77707308639091, longitude: -122.43653699205143 }, // scott//fulton
+    { latitude: 37.77895091514949, longitude: -122.43690629127684 }, // scott/golden gate ave
+    { latitude: 37.77970981690782, longitude: -122.43020966517578 }, // golden gate ave//webster
+    { latitude: 37.781675141543126, longitude: -122.43055434445286 }, // webster//eddy
+  ];
+  // dolores park to target on folsom
+  const DtoTwaypoints: LatLng[] = [
+    { latitude: 37.75823130521337, longitude: -122.42579354672583 }, // dolores//20th
+    { latitude: 37.75865963102936, longitude: -122.41907840592829 }, // 20th//mission
+    { latitude: 37.758918879667036, longitude: -122.41475847448017 }, // 20th folsom
+    { latitude: 37.76209741948808, longitude: -122.4150008468374 }, // folsom/18th
+    { latitude: 37.76226108771772, longitude: -122.41284486967967 }, // 18th//harrison
+    { latitude: 37.76869538887952, longitude: -122.41349341823845 }, // harrison//14th
   ];
 
   return (
     <>
+      <SafeAreaView
+        style={tw`h-1/4 bg-white w-full flex justify-center items-center`}
+      >
+        <Text style={tw`text-lg`}>{googleDistance} km</Text>
+        <Text style={tw`text-lg`}>{googleDuration} min</Text>
+      </SafeAreaView>
       {/* fastest directions */}
       <MapViewDirections
         origin={origin}
@@ -106,24 +136,25 @@ const Directions = ({ intersections }: { intersections: Intersection[] }) => {
         apikey={GOOGLE_MAPS_APIKEY}
         strokeWidth={3}
         strokeColor={"#3b83f6"}
-        mode={"WALKING"}
+        // mode={"WALKING"}
         onReady={(result) => {
           console.log("routing");
           setGoogleDistance(result.distance);
-          setGoogleDuration(result.duration);
+          setGoogleDuration(Math.round(result.duration));
         }}
         onError={(error) => {
           console.log("googleError", error);
         }}
       />
       {/* safety waypoints */}
-      <MapViewDirections
-        waypoints={waypoints}
+      {/* <MapViewDirections
+        waypoints={PtoCwaypoints}
         origin={origin}
         destination={destination}
         apikey={GOOGLE_MAPS_APIKEY}
         strokeWidth={3}
         strokeColor={"#9DE267"}
+        // mode={"WALKING"}
         onReady={(result) => {
           console.log("waypoints routing");
           // setGoogleDistance(result.distance);
@@ -132,7 +163,7 @@ const Directions = ({ intersections }: { intersections: Intersection[] }) => {
         onError={(error) => {
           console.log("waypoints googleError", error);
         }}
-      />
+      /> */}
     </>
   );
 };
