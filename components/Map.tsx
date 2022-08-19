@@ -97,6 +97,22 @@ export default function Map() {
     });
   }, [origin, destination]);
 
+  // zoom back out if origin and destination are reset
+  useEffect(() => {
+    if (!ready) {
+      mapRef.current?.animateToRegion({
+        latitude: 37.7804,
+        longitude: -122.44516,
+        latitudeDelta: 0.15,
+        longitudeDelta: 0.15,
+      });
+    }
+  }, [ready]);
+
+  useEffect(() => {
+    console.log(destination);
+  }, [destination]);
+
   return (
     <View>
       <MapView
@@ -111,7 +127,7 @@ export default function Map() {
           longitudeDelta: 0.15,
         }}
       >
-        {origin.latitude !== 0 && origin.latitude !== 0 ? (
+        {origin.latitude !== 0 && (
           <Marker
             coordinate={origin}
             draggable
@@ -119,8 +135,8 @@ export default function Map() {
             onDragEnd={(e) => setOrigin(e.nativeEvent.coordinate)}
             identifier={"origin"}
           />
-        ) : null}
-        {destination.latitude !== 0 ? (
+        )}
+        {destination.latitude !== 0 && (
           <Marker
             coordinate={destination}
             draggable
@@ -128,9 +144,8 @@ export default function Map() {
             onDragEnd={(e) => setDestination(e.nativeEvent.coordinate)}
             identifier={"destination"}
           />
-        ) : null}
+        )}
         {/* directions */}
-        {/* {!ready && <ResultsScreen crimeData={crimeData} />} */}
         {ready && <Directions intersections={crimeData} />}
       </MapView>
     </View>

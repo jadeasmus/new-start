@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, SafeAreaView } from "react-native";
+import { View, Text, SafeAreaView, TouchableOpacity } from "react-native";
 import { LatLng } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import { useRecoilValue, useRecoilState } from "recoil";
-import { originState, destinationState } from "../state/Directions.state";
+import {
+  originStateSelector,
+  destinationStateSelector,
+} from "../state/Directions.state";
 import { GOOGLE_MAPS_APIKEY } from "@env";
 import axios from "axios";
 import tw from "tailwind-react-native-classnames";
@@ -11,11 +14,15 @@ import tw from "tailwind-react-native-classnames";
 type Intersection = { intersection: string };
 
 const Directions = ({ intersections }: { intersections: Intersection[] }) => {
-  const origin = useRecoilValue(originState);
-  const destination = useRecoilValue(destinationState);
+  const [origin, setOrigin] = useRecoilState(originStateSelector);
+  const [destination, setDestination] = useRecoilState(
+    destinationStateSelector
+  );
   const crime_cross_streets = intersections;
   const [googleDistance, setGoogleDistance] = useState<number>();
   const [googleDuration, setGoogleDuration] = useState<number>();
+  const [waypointsDistance, setWaypointsDistance] = useState<number>(5);
+  const [waypointsDuration, setWaypointsDuration] = useState<number>(40);
 
   // get more details directions response from google
   const [googleDirections, setGoogleDirections] = useState<any>();
@@ -26,7 +33,7 @@ const Directions = ({ intersections }: { intersections: Intersection[] }) => {
       )
       .then((response) => {
         setGoogleDirections(response);
-        // console.log("google directions", response);
+        console.log("google directions", response);
       })
       .catch((err) => {
         console.log(err.message);
@@ -121,14 +128,51 @@ const Directions = ({ intersections }: { intersections: Intersection[] }) => {
     { latitude: 37.76869538887952, longitude: -122.41349341823845 }, // harrison//14th
   ];
 
+  const reset = () => {
+    setOrigin({ latitude: 0, longitude: 0 });
+    setDestination({ latitude: 0, longitude: 0 });
+    setGoogleDirections(null);
+    setGoogleSteps(null);
+  };
+
+  useEffect(() => {
+    console.log("something happened");
+  }, [origin, destination]);
+
+  // tw`flex items-center justify-center h-full w-1/2
+
   return (
     <>
-      <SafeAreaView
-        style={tw`h-1/4 bg-white w-full flex justify-center items-center`}
-      >
-        <Text style={tw`text-lg`}>{googleDistance} km</Text>
-        <Text style={tw`text-lg`}>{googleDuration} min</Text>
-      </SafeAreaView>
+      {origin.latitude !== 0 && (
+        <SafeAreaView style={tw``}>
+          {/* back button */}
+          <TouchableOpacity onPress={reset} style={tw`bg-white`}>
+            <Text style={tw`text-lg font-light absolute top-12 left-7`}>
+              {"< Back"}
+            </Text>
+          </TouchableOpacity>
+          {/* <View style={tw`flex flex-row`}> */}
+          {/* fastest route */}
+          {/* <Text
+              style={tw`absolute left-20 top-20 text-blue-500 font-semibold pb-2`}
+            >
+              Fastest
+            </Text>
+            <Text style={tw`absolute left-20 top-24 text-xl`}>
+              {googleDistance} mi
+            </Text>
+            <Text style={tw`absolute left-20 top-28 text-xl`}>
+              {googleDuration} mins
+            </Text>
+            {/* safest route */}
+          {/* <View style={tw`absolute top-20 right-20 border-2 border-blue-400`}>
+              <Text style={tw`text-green-500 font-semibold pb-2`}>Safest</Text>
+              <Text style={tw`text-xl`}>{waypointsDistance} mi</Text>
+              <Text style={tw`text-xl`}>{waypointsDuration} mins</Text>
+            </View>  */}
+          {/* </View> */}
+        </SafeAreaView>
+      )}
       {/* fastest directions */}
       <MapViewDirections
         origin={origin}
@@ -136,10 +180,10 @@ const Directions = ({ intersections }: { intersections: Intersection[] }) => {
         apikey={GOOGLE_MAPS_APIKEY}
         strokeWidth={3}
         strokeColor={"#3b83f6"}
-        // mode={"WALKING"}
+        mode={"WALKING"}
         onReady={(result) => {
           console.log("routing");
-          setGoogleDistance(result.distance);
+          setGoogleDistance(Math.round(result.distance * 0.62137 * 100) / 100); // turns km into miles and rounds to 2 decimal places
           setGoogleDuration(Math.round(result.duration));
         }}
         onError={(error) => {
